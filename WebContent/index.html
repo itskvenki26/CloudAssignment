@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+<title>Echo Chamber</title>
+<script src="http://maps.google.com/maps/api/js?sensor=false"></script>
+<script src="http://ajax.aspnetcdn.com/ajax/jQuery/jquery-1.10.1.min.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+</head>
+<body>
+
+	<div>
+		<input type="text" id="messageinput" />
+	</div>
+	<div>
+		<button type="button" onclick="openSocket();">Open</button>
+		<button type="button" onclick="send();">Send</button>
+		<button type="button" onclick="closeSocket();">Close</button>
+	</div>
+	<!-- Server responses get written here -->
+	<div id="messages"></div>
+	<div id="map" style="width: 1500px; height: 1400px;"></div>
+
+	<!-- Script to utilise the WebSocket -->
+	<script type="text/javascript">
+		var iconURLPrefix = 'http://maps.google.com/mapfiles/ms/icons/';
+
+		var icons = [ iconURLPrefix + 'red-dot.png',
+				iconURLPrefix + 'green-dot.png',
+				iconURLPrefix + 'blue-dot.png',
+				iconURLPrefix + 'orange-dot.png',
+				iconURLPrefix + 'purple-dot.png',
+				iconURLPrefix + 'pink-dot.png',
+				iconURLPrefix + 'yellow-dot.png' ]
+		var icons_length = icons.length;
+
+		var shadow = {
+			anchor : new google.maps.Point(15, 33),
+			url : iconURLPrefix + 'msmarker.shadow.png'
+		};
+
+		var map = new google.maps.Map(document.getElementById('map'), {
+			zoom : 3,
+			center : new google.maps.LatLng(-33.33, 44.44),
+			mapTypeId : google.maps.MapTypeId.ROADMAP,
+			mapTypeControl : false,
+			streetViewControl : false,
+			panControl : false,
+			zoomControlOptions : {
+				position : google.maps.ControlPosition.LEFT_BOTTOM
+			}
+		});
+
+		var infowindow = new google.maps.InfoWindow({
+			maxWidth : 160
+		});
+
+		var webSocket;
+		var messages = document.getElementById("messages");
+
+		function openSocket() {
+			// Ensures only one connection is open at a time
+			if (webSocket !== undefined
+					&& webSocket.readyState !== WebSocket.CLOSED) {
+				writeResponse("WebSocket is already opened.");
+				return;
+			}
+			// Create a new instance of the websocket
+			webSocket = new WebSocket("ws://localhost:8080/WebSocketTS2/echo");
+
+			/**
+			 * Binds functions to the listeners for the websocket.
+			 */
+			webSocket.onopen = function(event) {
+				// For reasons I can't determine, onopen gets called twice
+				// and the first time event.data is undefined.
+				// Leave a comment if you know the answer.
+				if (event.data === undefined)
+					return;
+
+				writeResponse(event.data);
+			};
+
+			webSocket.onmessage = function(event) {
+				var str = event.data;
+				var res = str.split("|")
+				
+					var myLatlng = new google.maps.LatLng(res[0], res[1]);
+
+					var marker = new google.maps.Marker({
+						position : myLatlng,
+						title : "Hello World!"
+					});
+
+					marker.setMap(map);
+
+					console.log(event.data)
+				
+			};
+
+			webSocket.onclose = function(event) {
+				writeResponse("Connection closed");
+			};
+		}
+
+		/**
+		 * Sends the value of the text input to the server
+		 */
+		function send() {
+			//openSocket();
+			var text = document.getElementById("messageinput").value;
+			webSocket.send(text);
+		}
+
+		function closeSocket() {
+			webSocket.close();
+		}
+
+		function writeResponse(text) {
+			messages.innerHTML += "<br/>" + text;
+		}
+	</script>
+
+</body>
+</html>
